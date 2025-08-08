@@ -1,3 +1,4 @@
+// backend/index.js
 import express from "express";
 import nodemailer from "nodemailer";
 import cors from "cors";
@@ -8,20 +9,33 @@ dotenv.config();
 
 const app = express();
 
-// Middleware - Updated CORS setup
+// --- CORS Middleware ---
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
       "https://portfolio-frontend-sepia-nu.vercel.app",
-    ], // Your frontend URL
-    methods: ["GET", "POST"],
+    ],
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+// --- Handle preflight for all routes ---
+app.options("*", (req, res) => {
+  res.header(
+    "Access-Control-Allow-Origin",
+    req.headers.origin || "https://portfolio-frontend-sepia-nu.vercel.app"
+  );
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  return res.sendStatus(200);
+});
+
 app.use(express.json());
 
-// Email transporterN
+// --- Nodemailer Transporter ---
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -30,7 +44,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Fixed API endpoint
+// --- Contact API Route ---
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
@@ -59,7 +73,7 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
-// --- Use portfinder to get an available port and start the server ---
+// --- Start server locally (Vercel ignores this in production) ---
 const startServer = async () => {
   const PORT = await portfinder.getPortPromise({ startPort: 5000 });
   app.listen(PORT, () => {
@@ -68,3 +82,5 @@ const startServer = async () => {
 };
 
 startServer();
+
+export default app; // required for Vercel serverless deployment
