@@ -7,26 +7,21 @@ dotenv.config();
 
 const app = express();
 
-// Configure CORS
+// ✅ Allowed origins: production, previews, localhost
 const allowedOrigins = [
-  "https://portfolio-frontend-sepia-nu.vercel.app",
-  "https://portfolio-frontend-*.vercel.app", // wildcard for preview deployments
-  "http://localhost:5173", // for local development
+  "https://portfolio-frontend-sepia-nu.vercel.app", // production
+  /^https:\/\/portfolio-frontend-.*\.vercel\.app$/, // any Vercel preview
+  "http://localhost:5173", // local dev
 ];
 
+// ✅ CORS options
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (
-      allowedOrigins.some((allowedOrigin) => {
-        return (
-          origin === allowedOrigin ||
-          origin.match(new RegExp(allowedOrigin.replace("*", ".*")))
-        );
-      })
-    ) {
+    if (!origin) return callback(null, true); // allow requests with no origin
+    const isAllowed = allowedOrigins.some((o) =>
+      typeof o === "string" ? origin === o : o.test(origin)
+    );
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -38,16 +33,14 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
-// Apply CORS middleware
+// ✅ Apply CORS before all routes
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // handle preflight
 
-// Handle preflight requests
-app.options("*", cors(corsOptions));
-
-// Body parser middleware
+// ✅ Parse JSON
 app.use(express.json());
 
-// Create Nodemailer transporter
+// Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -56,7 +49,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Health check endpoint
+// Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "OK" });
 });
@@ -66,7 +59,6 @@ app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
 
-    // Validate required fields
     if (!name || !email || !subject || !message) {
       return res.status(400).json({
         success: false,
@@ -74,7 +66,6 @@ app.post("/api/contact", async (req, res) => {
       });
     }
 
-    // Validate email format
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({
         success: false,
@@ -108,7 +99,7 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
-// Handle 404
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
@@ -116,8 +107,10 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ error: "CORS error: Origin not allowed" });
+  }
   res.status(500).json({ error: "Something went wrong!" });
 });
 
-// Export for Vercel
 export default app;
