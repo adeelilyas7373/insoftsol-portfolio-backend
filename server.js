@@ -13,7 +13,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://portfolio-frontend-sepia-nu.vercel.app/",
+      "https://portfolio-frontend-sepia-nu.vercel.app",
     ], // Your frontend URL
     methods: ["GET", "POST"],
     credentials: true,
