@@ -1,41 +1,34 @@
-// backend/index.js
 import express from "express";
 import nodemailer from "nodemailer";
 import cors from "cors";
 import dotenv from "dotenv";
-import portfinder from "portfinder";
 
 dotenv.config();
 
 const app = express();
 
-// --- CORS Middleware ---
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://portfolio-frontend-sepia-nu.vercel.app",
-    ],
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
+// Enhanced CORS configuration
+const corsOptions = {
+  origin: [
+    "http://localhost:5173",
+    "https://portfolio-frontend-sepia-nu.vercel.app",
+    "https://portfolio-frontend-*.vercel.app",
+  ],
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  optionsSuccessStatus: 200, // For legacy browser support
+};
 
-// --- Handle preflight for all routes ---
-app.options("*", (req, res) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    req.headers.origin || "https://portfolio-frontend-sepia-nu.vercel.app"
-  );
-  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  return res.sendStatus(200);
-});
+app.use(cors(corsOptions));
 
+// Handle preflight requests
+app.options("*", cors(corsOptions));
+
+// Body parser middleware
 app.use(express.json());
 
-// --- Nodemailer Transporter ---
+// Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -44,10 +37,23 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// --- Contact API Route ---
+// Contact API endpoint
 app.post("/api/contact", async (req, res) => {
+  // Set CORS headers explicitly
+  res.header("Access-Control-Allow-Origin", corsOptions.origin);
+  res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+
   try {
     const { name, email, subject, message } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({
+        success: false,
+        error: "All fields are required",
+      });
+    }
 
     await transporter.sendMail({
       from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
@@ -65,7 +71,7 @@ app.post("/api/contact", async (req, res) => {
 
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Server error:", error);
+    console.error("Error sending email:", error);
     res.status(500).json({
       success: false,
       error: error.message || "Internal server error",
@@ -73,14 +79,10 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
-// --- Start server locally (Vercel ignores this in production) ---
-const startServer = async () => {
-  const PORT = await portfinder.getPortPromise({ startPort: 5000 });
-  app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
-  });
-};
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "healthy" });
+});
 
-startServer();
-
-export default app; // required for Vercel serverless deployment
+// Export for Vercel
+export default app;
