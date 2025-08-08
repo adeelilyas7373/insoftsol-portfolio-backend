@@ -1,34 +1,50 @@
 import express from "express";
-import nodemailer from "nodemailer";
 import cors from "cors";
 import dotenv from "dotenv";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
 const app = express();
 
 // Enhanced CORS configuration
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://portfolio-frontend-sepia-nu.vercel.app",
+  "https://portfolio-frontend-*.vercel.app",
+];
+
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "https://portfolio-frontend-sepia-nu.vercel.app",
-    "https://portfolio-frontend-*.vercel.app",
-  ],
+  origin: function (origin, callback) {
+    if (
+      !origin ||
+      allowedOrigins.some(
+        (allowedOrigin) =>
+          origin === allowedOrigin ||
+          origin.match(new RegExp(allowedOrigin.replace("*", ".*")))
+      )
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
-  optionsSuccessStatus: 200, // For legacy browser support
+  optionsSuccessStatus: 200,
 };
 
+// Apply CORS middleware
 app.use(cors(corsOptions));
 
-// Handle preflight requests
+// Explicitly handle preflight requests
 app.options("*", cors(corsOptions));
 
-// Body parser middleware
+// Parse JSON requests
 app.use(express.json());
 
-// Nodemailer transporter
+// Nodemailer setup
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -39,20 +55,19 @@ const transporter = nodemailer.createTransport({
 
 // Contact API endpoint
 app.post("/api/contact", async (req, res) => {
-  // Set CORS headers explicitly
-  res.header("Access-Control-Allow-Origin", corsOptions.origin);
-  res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
+  // Manually set CORS headers (extra safety)
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    req.headers.origin || allowedOrigins[0]
+  );
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   try {
     const { name, email, subject, message } = req.body;
 
-    // Validate required fields
     if (!name || !email || !subject || !message) {
-      return res.status(400).json({
-        success: false,
-        error: "All fields are required",
-      });
+      return res.status(400).json({ error: "All fields are required" });
     }
 
     await transporter.sendMail({
@@ -71,17 +86,9 @@ app.post("/api/contact", async (req, res) => {
 
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message || "Internal server error",
-    });
+    console.error("Error:", error);
+    res.status(500).json({ error: "Failed to send message" });
   }
-});
-
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "healthy" });
 });
 
 // Export for Vercel
