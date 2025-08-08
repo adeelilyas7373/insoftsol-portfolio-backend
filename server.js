@@ -11,7 +11,10 @@ const app = express();
 // Middleware - Updated CORS setup
 app.use(
   cors({
-    origin: ["http://localhost:5173"], // Your frontend URL
+    origin: [
+      "http://localhost:5173",
+      "https://portfolio-frontend-sepia-nu.vercel.app/",
+    ], // Your frontend URL
     methods: ["GET", "POST"],
     credentials: true,
   })
