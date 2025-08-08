@@ -10,8 +10,8 @@ const app = express();
 // ✅ Allowed origins: production, previews, localhost
 const allowedOrigins = [
   "https://portfolio-frontend-sepia-nu.vercel.app", // production
-  /^https:\/\/portfolio-frontend-.*\.vercel\.app$/, // any Vercel preview
   "http://localhost:5173", // local dev
+  /\.vercel\.app$/, // allow preview deployments
 ];
 
 // ✅ CORS options
@@ -21,11 +21,9 @@ const corsOptions = {
     const isAllowed = allowedOrigins.some((o) =>
       typeof o === "string" ? origin === o : o.test(origin)
     );
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
+    isAllowed
+      ? callback(null, true)
+      : callback(new Error("Not allowed by CORS"));
   },
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
