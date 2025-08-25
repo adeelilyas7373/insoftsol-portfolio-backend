@@ -11,7 +11,7 @@ const app = express();
 const allowedOrigins = [
   "https://portfolio-frontend-sepia-nu.vercel.app", // production
   "http://localhost:5173", // local dev
-  /\.vercel\.app$/, // allow preview deployments
+  /^https?:\/\/([a-zA-Z0-9-]+\.)?vercel\.app$/, // allow preview deployments
 ];
 
 // ✅ CORS options
