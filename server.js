@@ -6,10 +6,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-
+const PORT = process.env.PORT || 9000;
 // ✅ Allowed origins: production, previews, localhost
 const allowedOrigins = [
-  "https://portfolio-frontend-sepia-nu.vercel.app", // production
+  "https://insoftsol-portfolio.vercel.app/", // production
   "http://localhost:5173", // local dev
   /^https?:\/\/([a-zA-Z0-9-]+\.)?vercel\.app$/, // allow preview deployments
 ];
@@ -111,4 +111,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Something went wrong!" });
 });
 
-export default app;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
